@@ -5,8 +5,9 @@ from supabase import create_client
 from io import BytesIO
 
 # Configurar Supabase
-SUPABASE_URL = "TU_SUPABASE_URL"
-SUPABASE_KEY = "TU_SUPABASE_KEY"
+import os
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 BUCKET_NAME = "imagenes"  # Nombre del bucket en Supabase Storage
 supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
