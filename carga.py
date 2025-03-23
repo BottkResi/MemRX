@@ -75,8 +75,12 @@ st.title("🧠 Carga de Casos Clínicos")
 # Casos existentes
 st.subheader("📋 Casos ya cargados")
 casos = obtener_casos()
+st.write("🧪 Lista de casos:", casos)
+st.write("🧪 Tipo de 'seleccion':", type(seleccion))
 if casos:
-    seleccion = st.selectbox("Selecciona un caso", casos, format_func=lambda c: f"{c['id']} - {c['diagnostico_principal']}")
+    opciones = {f"{c['id']} - {c['diagnostico_principal']}": c for c in casos}
+    seleccion_str = st.selectbox("Selecciona un caso", list(opciones.keys()))
+    seleccion = opciones.get(seleccion_str)
     st.write(f"ID del caso seleccionado: {seleccion['id']}")
 else:
     st.info("No hay casos cargados todavía.")
