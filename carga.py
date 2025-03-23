@@ -18,9 +18,29 @@ def obtener_casos():
     response = supabase.table("casos_clinicos").select("id, diagnostico_principal, imagenes").execute()
     return response.data if response.data else []
 
-st.title("📤 Subir imagen y asociar a caso clínico")
+st.title("🧠 Carga de Casos Clínicos y Subida de Imágenes")
 
-# Seleccionar caso
+# --- SECCIÓN: Cargar caso desde código Python ---
+st.subheader("🐍 Cargar nuevo caso clínico en formato Python")
+
+codigo_caso = st.text_area("Pegá el bloque de código con la variable 'nuevo_caso'", height=250)
+
+if st.button("Cargar caso desde código"):
+    try:
+        contexto = {"supabase": supabase}
+        exec(codigo_caso, contexto)
+        if "nuevo_caso" in contexto:
+            resultado = supabase.table("casos_clinicos").insert(contexto["nuevo_caso"]).execute()
+            st.success("✅ Caso cargado correctamente.")
+            st.json(resultado)
+        else:
+            st.error("❌ No se encontró la variable 'nuevo_caso' en el código.")
+    except Exception as e:
+        st.error(f"⚠️ Error al ejecutar el código: {str(e)}")
+
+# --- SECCIÓN: Subir imagen a un caso clínico existente ---
+st.subheader("📤 Subir imagen y asociar a caso clínico")
+
 casos = obtener_casos()
 if not casos:
     st.warning("No hay casos disponibles en la base de datos.")
@@ -29,7 +49,7 @@ if not casos:
 opciones = {f"{c['id']} - {c['diagnostico_principal'] or '(Sin diagnóstico)'}": c for c in casos}
 seleccion_str = st.selectbox("Selecciona un caso clínico", list(opciones.keys()))
 caso = opciones[seleccion_str]
-st.markdown(f"**ID del caso:** {caso['id']}")
+st.markdown(f"**ID del caso seleccionado:** {caso['id']}")
 
 # Subir imagen
 imagen = st.file_uploader("Selecciona una imagen", type=["png", "jpg", "jpeg"])
@@ -39,14 +59,12 @@ if imagen and st.button("Subir Imagen"):
         file_bytes = imagen.getvalue()
         extension = imagen.name.split('.')[-1]
         diagnostico = caso["diagnostico_principal"] or "caso"
-        diagnostico = re.sub(r"[^a-zA-Z0-9_]", "_", diagnostico)  # Reemplaza todo lo no válido
+        diagnostico = re.sub(r"[^a-zA-Z0-9_]", "_", diagnostico)
 
         imagenes_actuales = caso.get("imagenes")
         if isinstance(imagenes_actuales, str):
             imagenes_actuales = json.loads(imagenes_actuales)
-        elif isinstance(imagenes_actuales, list):
-            imagenes_actuales = imagenes_actuales
-        else:
+        elif not isinstance(imagenes_actuales, list):
             imagenes_actuales = []
 
         num_imagen = len(imagenes_actuales) + 1
