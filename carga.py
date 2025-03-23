@@ -22,7 +22,7 @@ def subir_imagen(file, caso):
             return "⚠️ Error: el caso recibido no es un diccionario."
         file_bytes = file.getvalue()
         extension = file.name.split('.')[-1]
-        diagnostico = caso["diagnostico_principal"].replace(" ", "_")
+        diagnostico = caso["diagnostico_principal"].replace(" ", "_") if caso["diagnostico_principal"] else "caso"
         num_imagen = len(caso.get("imagenes") or []) + 1
         nuevo_nombre = f"{diagnostico}_{num_imagen}.{extension}"
         path = f"{nuevo_nombre}"
@@ -74,26 +74,36 @@ st.title("🧠 Carga de Casos Clínicos")
 # Casos existentes
 st.subheader("📋 Casos ya cargados")
 casos = obtener_casos()
-st.write("🧪 Lista de casos:", casos)
+
 if casos:
-    opciones = {f"{c['id']} - {c['diagnostico_principal']}": c for c in casos}
+    opciones = {f"{c['id']} - {c['diagnostico_principal'] or '(Sin diagnóstico)'}": c for c in casos}
     seleccion_str = st.selectbox("Selecciona un caso", list(opciones.keys()))
     seleccion = opciones.get(seleccion_str)
+    
     st.write(f"ID del caso seleccionado: {seleccion['id']}")
     st.write("🧪 Tipo de 'seleccion':", type(seleccion))
+
+    # Mostrar imágenes ya cargadas
+    st.subheader("🖼️ Imágenes ya asociadas a este caso")
+    if seleccion.get("imagenes"):
+        for url in seleccion["imagenes"]:
+            st.image(url, width=300)
+    else:
+        st.info("Este caso aún no tiene imágenes asociadas.")
+
+    # Subir imágenes
+    st.subheader("📤 Subir imagen para caso seleccionado")
+    imagen = st.file_uploader("Selecciona una imagen", type=["png", "jpg", "jpeg"])
+    if imagen and st.button("Subir Imagen"):
+        url_imagen = subir_imagen(imagen, seleccion)
+        if url_imagen and isinstance(url_imagen, str) and url_imagen.startswith("http"):
+            st.success(f"✅ Imagen subida correctamente: {url_imagen}")
+        else:
+            st.error(url_imagen)
+
 else:
     st.info("No hay casos cargados todavía.")
     seleccion = None
-
-# Subir imágenes
-st.subheader("📤 Subir imagen para caso seleccionado")
-imagen = st.file_uploader("Selecciona una imagen", type=["png", "jpg", "jpeg"])
-if imagen and seleccion and st.button("Subir Imagen"):
-    url_imagen = subir_imagen(imagen, seleccion)
-    if url_imagen and isinstance(url_imagen, str) and url_imagen.startswith("http"):
-        st.success(f"✅ Imagen subida correctamente: {url_imagen}")
-    else:
-        st.error(url_imagen)
 
 # Cargar caso desde código Python
 st.subheader("🐍 Cargar caso clínico desde código Python")
