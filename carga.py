@@ -27,7 +27,7 @@ if imagen and st.button("Subir Imagen"):
 
         response = supabase.storage.from_(BUCKET_NAME).upload(
           path,
-          BytesIO(file_bytes),
+          file_bytes,
           {"content-type": imagen.type}  # ✅ Pasamos un dict, no un str
         )
         st.write("📦 Resultado del upload:", response)
