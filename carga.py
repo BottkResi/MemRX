@@ -38,10 +38,10 @@ def ejecutar_sql(query):
 # Función para ejecutar carga desde código Python
 def cargar_desde_codigo(codigo):
     try:
-        contexto = {}
-        exec(codigo, {}, contexto)
+        contexto = {"supabase": supabase}
+        exec(codigo, contexto)
         if "nuevo_caso" in contexto:
-            resultado = supabase.table("casos_clinicos").insert(contexto["nuevo_caso"]).execute()
+            resultado = contexto["supabase"].table("casos_clinicos").insert(contexto["nuevo_caso"]).execute()
             return resultado
         else:
             return {"error": "No se encontró la variable 'nuevo_caso' en el código proporcionado."}
