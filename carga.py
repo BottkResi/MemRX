@@ -2,6 +2,7 @@
 import streamlit as st
 from supabase import create_client, Client
 import json
+import re
 
 # Configuración
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
@@ -37,8 +38,9 @@ if imagen and st.button("Subir Imagen"):
     try:
         file_bytes = imagen.getvalue()
         extension = imagen.name.split('.')[-1]
-        diagnostico = caso["diagnostico_principal"].replace(" ", "_") if caso["diagnostico_principal"] else "caso"
-        
+        diagnostico = caso["diagnostico_principal"] or "caso"
+        diagnostico = re.sub(r"[^a-zA-Z0-9_]", "_", diagnostico)  # Reemplaza todo lo no válido
+
         imagenes_actuales = caso.get("imagenes")
         if isinstance(imagenes_actuales, str):
             imagenes_actuales = json.loads(imagenes_actuales)
