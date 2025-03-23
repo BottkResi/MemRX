@@ -28,9 +28,8 @@ def subir_imagen(file, caso):
 
         # Subir al bucket
         response = supabase.storage.from_(BUCKET_NAME).upload(
-            path, BytesIO(file_bytes), file.type, upsert=True
+            path, BytesIO(file_bytes), file.type
         )
-
         st.write("🔍 Resultado del upload:", response)
 
         # Validar respuesta
