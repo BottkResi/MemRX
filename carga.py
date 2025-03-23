@@ -1,21 +1,21 @@
 import streamlit as st
-from supabase_py import create_client
+from supabase import create_client, Client
 from io import BytesIO
 
-# Variables Supabase directamente en el código (⚠️ solo para pruebas)
-SUPABASE_URL = "https://qtaqyphuhqaqbclpzfvv.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0YXF5cGh1aHFhcWJjbHB6ZnZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI0MzExNTIsImV4cCI6MjA1ODAwNzE1Mn0.QF82UGW327uqDPSRajpp5DnVqHQXJOQh-TGDMGon3ew"
+# Leer desde secrets
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 BUCKET_NAME = "imagenes"
 
-# Debug opcional para validar URL y KEY
+# Mostrar URL para verificar
 st.write("🔌 Conectando a Supabase...")
-st.write("URL:", repr(SUPABASE_URL))
+st.write("URL:", SUPABASE_URL)
 st.write("KEY (parcial):", SUPABASE_KEY[:10] + "...")
 
 # Crear cliente Supabase
-supabase: Client = create_client(SUPABASE_URL.strip(), SUPABASE_KEY.strip())
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Función para obtener casos existentes
+# Función para obtener casos
 @st.cache_data
 def obtener_casos():
     response = supabase.table("casos_clinicos").select("id, pregunta_principal").execute()
@@ -40,32 +40,32 @@ def ejecutar_sql(query):
     except Exception as e:
         return str(e)
 
-# Interfaz en Streamlit
+# Interfaz Streamlit
 st.title("🧠 Carga de Casos Clínicos")
 
-# Casos ya cargados
-st.subheader("📋 Casos existentes")
+# Casos existentes
+st.subheader("📋 Casos ya cargados")
 casos = obtener_casos()
 if casos:
-    st.selectbox("Selecciona un caso existente:", [f"{c['id']} - {c['pregunta_principal']}" for c in casos])
+    caso_seleccionado = st.selectbox("Selecciona un caso", [f"{c['id']} - {c['pregunta_principal']}" for c in casos])
 else:
-    st.info("No hay casos cargados aún.")
+    st.info("No hay casos cargados todavía.")
 
-# Área para SQL
-st.subheader("📥 Cargar nuevo caso en SQL")
-query = st.text_area("Pega el código SQL aquí")
+# Carga SQL
+st.subheader("📝 Cargar caso clínico vía SQL")
+query = st.text_area("Pega el código SQL para insertar un nuevo caso.")
 if st.button("Ejecutar SQL"):
     resultado = ejecutar_sql(query)
     st.success("Consulta ejecutada.")
     st.text(resultado)
 
-# Subida de imagen
-st.subheader("📤 Subir imagen para caso clínico")
-imagen = st.file_uploader("Selecciona una imagen (jpg, png)", type=["jpg", "jpeg", "png"])
+# Subir imágenes
+st.subheader("📤 Subir imagen para caso")
+imagen = st.file_uploader("Selecciona una imagen", type=["png", "jpg", "jpeg"])
 if imagen and st.button("Subir Imagen"):
     url_imagen = subir_imagen(imagen)
     if url_imagen:
-        st.success(f"Imagen subida exitosamente: {url_imagen}")
-        st.text("Copiá esta URL en el campo 'imagenes' del caso clínico.")
+        st.success(f"Imagen subida: {url_imagen}")
+        st.text("Copiá esta URL y agregala al JSON de imágenes.")
     else:
-        st.error("Error al subir la imagen.")
+        st.error("❌ Error al subir la imagen.")
