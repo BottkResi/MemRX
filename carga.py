@@ -46,9 +46,16 @@ if not casos:
     st.warning("No hay casos disponibles en la base de datos.")
     st.stop()
 
-opciones = {f"{c['id']} - {c['diagnostico_principal'] or '(Sin diagnóstico)'}": c for c in casos}
-seleccion_str = st.selectbox("Selecciona un caso clínico", list(opciones.keys()))
-caso = opciones[seleccion_str]
+st.markdown("### 🔍 Selección de caso por ID")
+id_input = st.number_input("Ingresá el ID del caso clínico:", min_value=1, step=1)
+
+caso = next((c for c in casos if c["id"] == id_input), None)
+
+if caso:
+    st.success(f"✅ Caso seleccionado: {caso['id']} - {caso['diagnostico_principal']}")
+else:
+    st.warning("⚠️ No se encontró ningún caso con ese ID.")
+    st.stop()
 st.markdown(f"**ID del caso seleccionado:** {caso['id']}")
 
 # Subir imagen
