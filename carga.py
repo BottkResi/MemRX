@@ -22,26 +22,37 @@ def subir_imagen(file, caso):
         file_bytes = file.getvalue()
         extension = file.name.split('.')[-1]
         diagnostico = caso["diagnostico_principal"].replace(" ", "_")
-        num_imagen = len(caso.get("imagenes", [])) + 1
+        num_imagen = len(caso.get("imagenes") or []) + 1
         nuevo_nombre = f"{diagnostico}_{num_imagen}.{extension}"
         path = f"{nuevo_nombre}"
 
         # Subir al bucket
-        response = supabase.storage.from_(BUCKET_NAME).upload(path, BytesIO(file_bytes), file.type, upsert=True)
-        if not response:
-            return None
+        response = supabase.storage.from_(BUCKET_NAME).upload(
+            path, BytesIO(file_bytes), file.type, upsert=True
+        )
+
+        st.write("🔍 Resultado del upload:", response)
+
+        # Validar respuesta
+        if not response or hasattr(response, "error") and response.error:
+            return f"❌ Error al subir imagen: {getattr(response, 'error', 'desconocido')}"
 
         # URL pública
         url_imagen = f"{SUPABASE_URL}/storage/v1/object/public/{BUCKET_NAME}/{path}"
 
         # Actualizar campo imagenes
-        imagenes_actuales = caso.get("imagenes", [])
+        imagenes_actuales = caso.get("imagenes") or []
         imagenes_actuales.append(url_imagen)
-        supabase.table("casos_clinicos").update({"imagenes": imagenes_actuales}).eq("id", caso["id"]).execute()
+
+        update_result = supabase.table("casos_clinicos").update(
+            {"imagenes": imagenes_actuales}
+        ).eq("id", caso["id"]).execute()
+
+        st.write("📝 Resultado de actualización del caso:", update_result)
 
         return url_imagen
     except Exception as e:
-        return str(e)
+        return f"⚠️ Excepción: {str(e)}"
 
 # Función para ejecutar carga desde código Python
 def cargar_desde_codigo(codigo):
