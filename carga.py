@@ -7,7 +7,6 @@ SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 BUCKET_NAME = "imagenes"
 
-# Crear cliente Supabase
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 @st.cache_data
@@ -27,32 +26,30 @@ def subir_imagen(file, caso):
         extension = file.name.split('.')[-1]
         diagnostico = caso["diagnostico_principal"].replace(" ", "_") if caso["diagnostico_principal"] else "caso"
 
-        try:
-            imagenes = caso.get("imagenes")
-            if isinstance(imagenes, str):
-               imagenes_actuales = json.loads(imagenes)
-            elif isinstance(imagenes, list):
-               imagenes_actuales = imagenes
-            elif imagenes is None:
-               imagenes_actuales = []
-            else:
-               st.write("⚠️ Tipo inesperado en 'imagenes':", type(imagenes))
-               return "Error: tipo no compatible en 'imagenes'"
-        except Exception as e:
-            st.write("⚠️ Excepción al procesar 'imagenes':", str(e))
-            return "Error al interpretar el campo 'imagenes'"
+        imagenes = caso.get("imagenes")
+        if isinstance(imagenes, str):
+            imagenes_actuales = json.loads(imagenes)
+        elif isinstance(imagenes, list):
+            imagenes_actuales = imagenes
+        else:
+            imagenes_actuales = []
 
         num_imagen = len(imagenes_actuales) + 1
         nuevo_nombre = f"{diagnostico}_{num_imagen}.{extension}"
         path = f"{nuevo_nombre}"
 
-        response = supabase.storage.from_(BUCKET_NAME).upload(path, BytesIO(file_bytes), file.type)
+        response = supabase.storage.from_(BUCKET_NAME).upload(
+            path, BytesIO(file_bytes), file.type
+        )
         st.write("🔍 Resultado del upload:", response)
 
-        if not response or hasattr(response, "error") and response.error:
-            return f"❌ Error al subir imagen: {getattr(response, 'error', 'desconocido')}"
+        if hasattr(response, "error") and response.error:
+            st.error(f"❌ Error al subir imagen: {response.error}")
+            return f"❌ Error: {response.error}"
 
         url_imagen = f"{SUPABASE_URL}/storage/v1/object/public/{BUCKET_NAME}/{path}"
+        st.success(f"✅ Imagen subida: {url_imagen}")
+
         imagenes_actuales.append(url_imagen)
 
         update_result = supabase.table("casos_clinicos").update(
@@ -63,7 +60,7 @@ def subir_imagen(file, caso):
 
         return url_imagen
     except Exception as e:
-        return f"⚠️ Excepción: {str(e)}"
+        return f"⚠️ Excepción en subir_imagen: {str(e)}"
 
 def cargar_desde_codigo(codigo):
     try:
