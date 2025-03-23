@@ -1,9 +1,8 @@
+
 import streamlit as st
 from supabase import create_client, Client
 from io import BytesIO
-import ast
 
-# Leer desde secrets
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 BUCKET_NAME = "imagenes"
@@ -11,27 +10,36 @@ BUCKET_NAME = "imagenes"
 # Crear cliente Supabase
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Función para obtener casos
+# Función para obtener casos usando 'diagnostico_principal'
 @st.cache_data
 def obtener_casos():
-    response = supabase.table("casos_clinicos").select("id, pregunta_principal").execute()
+    response = supabase.table("casos_clinicos").select("id, diagnostico_principal, imagenes").execute()
     return response.data if response.data else []
 
-# Función para subir imagen
-def subir_imagen(file):
-    file_bytes = file.getvalue()
-    file_name = file.name
-    path = f"{file_name}"
-    response = supabase.storage.from_(BUCKET_NAME).upload(path, BytesIO(file_bytes), file.type)
-    if response:
-        return f"{SUPABASE_URL}/storage/v1/object/public/{BUCKET_NAME}/{path}"
-    return None
-
-# Función para ejecutar SQL
-def ejecutar_sql(query):
+# Función para subir imagen y actualizar el campo 'imagenes' en la tabla
+def subir_imagen(file, caso):
     try:
-        response = supabase.rpc("sql", {"query": query}).execute()
-        return response
+        file_bytes = file.getvalue()
+        extension = file.name.split('.')[-1]
+        diagnostico = caso["diagnostico_principal"].replace(" ", "_")
+        num_imagen = len(caso.get("imagenes", [])) + 1
+        nuevo_nombre = f"{diagnostico}_{num_imagen}.{extension}"
+        path = f"{nuevo_nombre}"
+
+        # Subir al bucket
+        response = supabase.storage.from_(BUCKET_NAME).upload(path, BytesIO(file_bytes), file.type, upsert=True)
+        if not response:
+            return None
+
+        # URL pública
+        url_imagen = f"{SUPABASE_URL}/storage/v1/object/public/{BUCKET_NAME}/{path}"
+
+        # Actualizar campo imagenes
+        imagenes_actuales = caso.get("imagenes", [])
+        imagenes_actuales.append(url_imagen)
+        supabase.table("casos_clinicos").update({"imagenes": imagenes_actuales}).eq("id", caso["id"]).execute()
+
+        return url_imagen
     except Exception as e:
         return str(e)
 
@@ -48,37 +56,32 @@ def cargar_desde_codigo(codigo):
     except Exception as e:
         return {"error": str(e)}
 
-# Interfaz Streamlit
+# INTERFAZ STREAMLIT
+
 st.title("🧠 Carga de Casos Clínicos")
 
 # Casos existentes
 st.subheader("📋 Casos ya cargados")
 casos = obtener_casos()
 if casos:
-    st.selectbox("Selecciona un caso", [f"{c['id']} - {c['pregunta_principal']}" for c in casos])
+    seleccion = st.selectbox("Selecciona un caso", casos, format_func=lambda c: f"{c['id']} - {c['diagnostico_principal']}")
+    st.write(f"ID del caso seleccionado: {seleccion['id']}")
 else:
     st.info("No hay casos cargados todavía.")
-
-# Carga SQL
-st.subheader("📝 Cargar caso clínico vía SQL")
-query = st.text_area("Pega el código SQL para insertar un nuevo caso.")
-if st.button("Ejecutar SQL"):
-    resultado = ejecutar_sql(query)
-    st.success("Consulta ejecutada.")
-    st.text(resultado)
+    seleccion = None
 
 # Subir imágenes
-st.subheader("📤 Subir imagen para caso")
+st.subheader("📤 Subir imagen para caso seleccionado")
 imagen = st.file_uploader("Selecciona una imagen", type=["png", "jpg", "jpeg"])
-if imagen and st.button("Subir Imagen"):
-    url_imagen = subir_imagen(imagen)
-    if url_imagen:
-        st.success(f"Imagen subida: {url_imagen}")
-        st.text("Copiá esta URL y agregala al JSON de imágenes.")
+if imagen and seleccion and st.button("Subir Imagen"):
+    url_imagen = subir_imagen(imagen, seleccion)
+    if url_imagen and isinstance(url_imagen, str):
+        st.success(f"✅ Imagen subida correctamente: {url_imagen}")
+        st.text("Copiá esta URL si querés usarla en otro lugar.")
     else:
         st.error("❌ Error al subir la imagen.")
 
-# NUEVO: Cargar caso clínico desde código Python
+# Cargar caso desde código Python
 st.subheader("🐍 Cargar caso clínico desde código Python")
 codigo_caso = st.text_area("Pega aquí el bloque de código con la variable 'nuevo_caso'", height=300)
 if st.button("Cargar caso desde código"):
