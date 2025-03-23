@@ -1,16 +1,12 @@
 import streamlit as st
 from supabase import create_client, Client
 from io import BytesIO
+import ast
 
 # Leer desde secrets
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 BUCKET_NAME = "imagenes"
-
-# Mostrar URL para verificar
-st.write("🔌 Conectando a Supabase...")
-st.write("URL:", SUPABASE_URL)
-st.write("KEY (parcial):", SUPABASE_KEY[:10] + "...")
 
 # Crear cliente Supabase
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -26,7 +22,6 @@ def subir_imagen(file):
     file_bytes = file.getvalue()
     file_name = file.name
     path = f"{file_name}"
-    
     response = supabase.storage.from_(BUCKET_NAME).upload(path, BytesIO(file_bytes), file.type)
     if response:
         return f"{SUPABASE_URL}/storage/v1/object/public/{BUCKET_NAME}/{path}"
@@ -40,6 +35,19 @@ def ejecutar_sql(query):
     except Exception as e:
         return str(e)
 
+# Función para ejecutar carga desde código Python
+def cargar_desde_codigo(codigo):
+    try:
+        contexto = {}
+        exec(codigo, {}, contexto)
+        if "nuevo_caso" in contexto:
+            resultado = supabase.table("casos_clinicos").insert(contexto["nuevo_caso"]).execute()
+            return resultado
+        else:
+            return {"error": "No se encontró la variable 'nuevo_caso' en el código proporcionado."}
+    except Exception as e:
+        return {"error": str(e)}
+
 # Interfaz Streamlit
 st.title("🧠 Carga de Casos Clínicos")
 
@@ -47,7 +55,7 @@ st.title("🧠 Carga de Casos Clínicos")
 st.subheader("📋 Casos ya cargados")
 casos = obtener_casos()
 if casos:
-    caso_seleccionado = st.selectbox("Selecciona un caso", [f"{c['id']} - {c['pregunta_principal']}" for c in casos])
+    st.selectbox("Selecciona un caso", [f"{c['id']} - {c['pregunta_principal']}" for c in casos])
 else:
     st.info("No hay casos cargados todavía.")
 
@@ -69,3 +77,14 @@ if imagen and st.button("Subir Imagen"):
         st.text("Copiá esta URL y agregala al JSON de imágenes.")
     else:
         st.error("❌ Error al subir la imagen.")
+
+# NUEVO: Cargar caso clínico desde código Python
+st.subheader("🐍 Cargar caso clínico desde código Python")
+codigo_caso = st.text_area("Pega aquí el bloque de código con la variable 'nuevo_caso'", height=300)
+if st.button("Cargar caso desde código"):
+    resultado = cargar_desde_codigo(codigo_caso)
+    if "error" in resultado:
+        st.error(f"❌ Error: {resultado['error']}")
+    else:
+        st.success("✅ Caso cargado correctamente.")
+        st.json(resultado)
