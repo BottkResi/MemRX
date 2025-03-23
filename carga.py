@@ -1,5 +1,5 @@
 import streamlit as st
-from supabase_py import create_client, Client
+from supabase_py import create_client
 from io import BytesIO
 
 # Variables Supabase directamente en el código (⚠️ solo para pruebas)
