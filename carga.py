@@ -10,22 +10,23 @@ BUCKET_NAME = "imagenes"
 # Crear cliente Supabase
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Función para obtener casos usando 'diagnostico_principal'
 @st.cache_data
 def obtener_casos():
     response = supabase.table("casos_clinicos").select("id, diagnostico_principal, imagenes").execute()
     return response.data if response.data else []
 
-# Función para subir imagen y actualizar el campo 'imagenes' en la tabla
 def subir_imagen(file, caso):
     try:
+        st.write("🧪 tipo de 'caso':", type(caso))
+        st.write("🧪 contenido de 'caso':", caso)
+
         if not isinstance(caso, dict):
             return "⚠️ Error: el caso recibido no es un diccionario."
+
         file_bytes = file.getvalue()
         extension = file.name.split('.')[-1]
         diagnostico = caso["diagnostico_principal"].replace(" ", "_") if caso["diagnostico_principal"] else "caso"
-        
-        # Manejo robusto del campo 'imagenes'
+
         imagenes = caso.get("imagenes")
         if isinstance(imagenes, str):
             imagenes_actuales = json.loads(imagenes)
@@ -38,18 +39,13 @@ def subir_imagen(file, caso):
         nuevo_nombre = f"{diagnostico}_{num_imagen}.{extension}"
         path = f"{nuevo_nombre}"
 
-        # Subir al bucket
-        response = supabase.storage.from_(BUCKET_NAME).upload(
-            path, BytesIO(file_bytes), file.type
-        )
+        response = supabase.storage.from_(BUCKET_NAME).upload(path, BytesIO(file_bytes), file.type)
         st.write("🔍 Resultado del upload:", response)
 
         if not response or hasattr(response, "error") and response.error:
             return f"❌ Error al subir imagen: {getattr(response, 'error', 'desconocido')}"
 
         url_imagen = f"{SUPABASE_URL}/storage/v1/object/public/{BUCKET_NAME}/{path}"
-
-        # Actualizar campo imagenes
         imagenes_actuales.append(url_imagen)
 
         update_result = supabase.table("casos_clinicos").update(
@@ -62,7 +58,6 @@ def subir_imagen(file, caso):
     except Exception as e:
         return f"⚠️ Excepción: {str(e)}"
 
-# Función para ejecutar carga desde código Python
 def cargar_desde_codigo(codigo):
     try:
         contexto = {"supabase": supabase}
@@ -75,11 +70,8 @@ def cargar_desde_codigo(codigo):
     except Exception as e:
         return {"error": str(e)}
 
-# INTERFAZ STREAMLIT
-
 st.title("🧠 Carga de Casos Clínicos")
 
-# Casos existentes
 st.subheader("📋 Casos ya cargados")
 casos = obtener_casos()
 
@@ -87,11 +79,10 @@ if casos:
     opciones = {f"{c['id']} - {c['diagnostico_principal'] or '(Sin diagnóstico)'}": c for c in casos}
     seleccion_str = st.selectbox("Selecciona un caso", list(opciones.keys()))
     seleccion = opciones.get(seleccion_str)
-    
+
     st.write(f"ID del caso seleccionado: {seleccion['id']}")
     st.write("🧪 Tipo de 'seleccion':", type(seleccion))
 
-    # Mostrar imágenes ya cargadas
     st.subheader("🖼️ Imágenes ya asociadas a este caso")
     imagenes_visibles = seleccion.get("imagenes")
     if isinstance(imagenes_visibles, str):
@@ -102,7 +93,6 @@ if casos:
     else:
         st.info("Este caso aún no tiene imágenes asociadas.")
 
-    # Subir imágenes
     st.subheader("📤 Subir imagen para caso seleccionado")
     imagen = st.file_uploader("Selecciona una imagen", type=["png", "jpg", "jpeg"])
     if imagen and st.button("Subir Imagen"):
@@ -116,7 +106,6 @@ else:
     st.info("No hay casos cargados todavía.")
     seleccion = None
 
-# Cargar caso desde código Python
 st.subheader("🐍 Cargar caso clínico desde código Python")
 codigo_caso = st.text_area("Pega aquí el bloque de código con la variable 'nuevo_caso'", height=300)
 if st.button("Cargar caso desde código"):
