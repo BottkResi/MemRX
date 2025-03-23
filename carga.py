@@ -19,6 +19,8 @@ def obtener_casos():
 # Función para subir imagen y actualizar el campo 'imagenes' en la tabla
 def subir_imagen(file, caso):
     try:
+        if not isinstance(caso, dict):
+            return "⚠️ Error: el caso recibido no es un diccionario."
         file_bytes = file.getvalue()
         extension = file.name.split('.')[-1]
         diagnostico = caso["diagnostico_principal"].replace(" ", "_")
@@ -85,11 +87,10 @@ st.subheader("📤 Subir imagen para caso seleccionado")
 imagen = st.file_uploader("Selecciona una imagen", type=["png", "jpg", "jpeg"])
 if imagen and seleccion and st.button("Subir Imagen"):
     url_imagen = subir_imagen(imagen, seleccion)
-    if url_imagen and isinstance(url_imagen, str):
+    if url_imagen and isinstance(url_imagen, str) and url_imagen.startswith("http"):
         st.success(f"✅ Imagen subida correctamente: {url_imagen}")
-        st.text("Copiá esta URL si querés usarla en otro lugar.")
     else:
-        st.error("❌ Error al subir la imagen.")
+       st.error(url_imagen)
 
 # Cargar caso desde código Python
 st.subheader("🐍 Cargar caso clínico desde código Python")
