@@ -1,4 +1,3 @@
-
 import streamlit as st
 from supabase import create_client, Client
 from io import BytesIO
@@ -76,12 +75,12 @@ st.title("🧠 Carga de Casos Clínicos")
 st.subheader("📋 Casos ya cargados")
 casos = obtener_casos()
 st.write("🧪 Lista de casos:", casos)
-st.write("🧪 Tipo de 'seleccion':", type(seleccion))
 if casos:
     opciones = {f"{c['id']} - {c['diagnostico_principal']}": c for c in casos}
     seleccion_str = st.selectbox("Selecciona un caso", list(opciones.keys()))
     seleccion = opciones.get(seleccion_str)
     st.write(f"ID del caso seleccionado: {seleccion['id']}")
+    st.write("🧪 Tipo de 'seleccion':", type(seleccion))
 else:
     st.info("No hay casos cargados todavía.")
     seleccion = None
@@ -94,7 +93,7 @@ if imagen and seleccion and st.button("Subir Imagen"):
     if url_imagen and isinstance(url_imagen, str) and url_imagen.startswith("http"):
         st.success(f"✅ Imagen subida correctamente: {url_imagen}")
     else:
-       st.error(url_imagen)
+        st.error(url_imagen)
 
 # Cargar caso desde código Python
 st.subheader("🐍 Cargar caso clínico desde código Python")
