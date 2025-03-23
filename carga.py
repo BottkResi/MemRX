@@ -19,8 +19,15 @@ def subir_imagen(file, caso):
         st.write("🧪 tipo de 'caso':", type(caso))
         st.write("🧪 contenido de 'caso':", caso)
 
+        # Si caso viene como string, lo parseamos
+        if isinstance(caso, str):
+            try:
+                caso = json.loads(caso)
+            except Exception as e:
+                return f"❌ Error al interpretar 'caso' como JSON: {str(e)}"
+
         if not isinstance(caso, dict):
-            return "⚠️ Error: el caso recibido no es un diccionario."
+            return "⚠️ Error: el caso recibido no es un diccionario válido."
 
         file_bytes = file.getvalue()
         extension = file.name.split('.')[-1]
