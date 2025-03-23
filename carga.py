@@ -1,6 +1,7 @@
 import streamlit as st
 from supabase import create_client, Client
 from io import BytesIO
+import json
 
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
@@ -23,7 +24,17 @@ def subir_imagen(file, caso):
         file_bytes = file.getvalue()
         extension = file.name.split('.')[-1]
         diagnostico = caso["diagnostico_principal"].replace(" ", "_") if caso["diagnostico_principal"] else "caso"
-        num_imagen = len(caso.get("imagenes") or []) + 1
+        
+        # Manejo robusto del campo 'imagenes'
+        imagenes = caso.get("imagenes")
+        if isinstance(imagenes, str):
+            imagenes_actuales = json.loads(imagenes)
+        elif isinstance(imagenes, list):
+            imagenes_actuales = imagenes
+        else:
+            imagenes_actuales = []
+
+        num_imagen = len(imagenes_actuales) + 1
         nuevo_nombre = f"{diagnostico}_{num_imagen}.{extension}"
         path = f"{nuevo_nombre}"
 
@@ -33,15 +44,12 @@ def subir_imagen(file, caso):
         )
         st.write("🔍 Resultado del upload:", response)
 
-        # Validar respuesta
         if not response or hasattr(response, "error") and response.error:
             return f"❌ Error al subir imagen: {getattr(response, 'error', 'desconocido')}"
 
-        # URL pública
         url_imagen = f"{SUPABASE_URL}/storage/v1/object/public/{BUCKET_NAME}/{path}"
 
         # Actualizar campo imagenes
-        imagenes_actuales = caso.get("imagenes") or []
         imagenes_actuales.append(url_imagen)
 
         update_result = supabase.table("casos_clinicos").update(
@@ -85,8 +93,11 @@ if casos:
 
     # Mostrar imágenes ya cargadas
     st.subheader("🖼️ Imágenes ya asociadas a este caso")
-    if seleccion.get("imagenes"):
-        for url in seleccion["imagenes"]:
+    imagenes_visibles = seleccion.get("imagenes")
+    if isinstance(imagenes_visibles, str):
+        imagenes_visibles = json.loads(imagenes_visibles)
+    if imagenes_visibles:
+        for url in imagenes_visibles:
             st.image(url, width=300)
     else:
         st.info("Este caso aún no tiene imágenes asociadas.")
