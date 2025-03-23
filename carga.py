@@ -27,13 +27,20 @@ def subir_imagen(file, caso):
         extension = file.name.split('.')[-1]
         diagnostico = caso["diagnostico_principal"].replace(" ", "_") if caso["diagnostico_principal"] else "caso"
 
-        imagenes = caso.get("imagenes")
-        if isinstance(imagenes, str):
-            imagenes_actuales = json.loads(imagenes)
-        elif isinstance(imagenes, list):
-            imagenes_actuales = imagenes
-        else:
-            imagenes_actuales = []
+        try:
+            imagenes = caso.get("imagenes")
+            if isinstance(imagenes, str):
+               imagenes_actuales = json.loads(imagenes)
+            elif isinstance(imagenes, list):
+               imagenes_actuales = imagenes
+            elif imagenes is None:
+               imagenes_actuales = []
+            else:
+               st.write("⚠️ Tipo inesperado en 'imagenes':", type(imagenes))
+               return "Error: tipo no compatible en 'imagenes'"
+        except Exception as e:
+            st.write("⚠️ Excepción al procesar 'imagenes':", str(e))
+            return "Error al interpretar el campo 'imagenes'"
 
         num_imagen = len(imagenes_actuales) + 1
         nuevo_nombre = f"{diagnostico}_{num_imagen}.{extension}"
