@@ -1,6 +1,6 @@
 
 import streamlit as st
-from supabase_py import create_client, Client
+from supabase-py import create_client, Client
 from io import BytesIO
 
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
