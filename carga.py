@@ -48,6 +48,7 @@ if not casos:
 
 st.markdown("### 🔍 Selección de caso por ID")
 id_input = st.number_input("Ingresá el ID del caso clínico:", min_value=1, step=1)
+
 caso = next((c for c in casos if c["id"] == id_input), None)
 
 if caso:
@@ -56,23 +57,9 @@ else:
     st.warning("⚠️ No se encontró ningún caso con ese ID.")
     st.stop()
 
-# Mostrar imágenes ya asociadas
-st.subheader("🖼️ Imágenes asociadas a este caso")
-imagenes_actuales = caso.get("imagenes")
-if isinstance(imagenes_actuales, str):
-    imagenes_actuales = json.loads(imagenes_actuales)
-elif not isinstance(imagenes_actuales, list):
-    imagenes_actuales = []
-
-if imagenes_actuales:
-    for url in imagenes_actuales:
-        st.image(url, width=300)
-        st.code(url, language="text")
-else:
-    st.info("Este caso aún no tiene imágenes asociadas.")
+st.markdown(f"**ID del caso seleccionado:** {caso['id']}")
 
 # Subir imagen
-st.subheader("📤 Subir imagen nueva")
 imagen = st.file_uploader("Selecciona una imagen", type=["png", "jpg", "jpeg"])
 
 if imagen and st.button("Subir Imagen"):
@@ -81,6 +68,12 @@ if imagen and st.button("Subir Imagen"):
         extension = imagen.name.split('.')[-1]
         diagnostico = caso["diagnostico_principal"] or "caso"
         diagnostico = re.sub(r"[^a-zA-Z0-9_]", "_", diagnostico)
+
+        imagenes_actuales = caso.get("imagenes")
+        if isinstance(imagenes_actuales, str):
+            imagenes_actuales = json.loads(imagenes_actuales)
+        elif not isinstance(imagenes_actuales, list):
+            imagenes_actuales = []
 
         num_imagen = len(imagenes_actuales) + 1
         nuevo_nombre = f"{diagnostico}_{num_imagen}.{extension}"
