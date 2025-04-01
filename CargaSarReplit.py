@@ -74,27 +74,27 @@ if imagen and st.button("Subir Imagen"):
         elif not isinstance(imagenes_actuales, list):
             imagenes_actuales = []
 
-        # 🔍 Verificar qué archivos ya existen en el Storage
-        lista_storage = supabase.storage.from_(BUCKET_NAME).list()
-        archivos_existentes = [obj["name"] for obj in lista_storage if obj["name"].startswith(diagnostico)]
+        # Función para generar un nombre único
+        def generar_nombre_unico(base, extension, supabase_storage):
+            numero = 1
+            while True:
+                nombre = f"{base}_{numero}.{extension}"
+                lista = supabase_storage.list()
+                nombres = [obj["name"] for obj in lista]
+                if nombre not in nombres:
+                    return nombre
+                numero += 1
 
-        # 📈 Buscar el número más alto usado
-        numeros_usados = []
-        for nombre in archivos_existentes:
-            match = re.search(rf"{re.escape(diagnostico)}_(\d+)\.{extension}", nombre)
-            if match:
-                numeros_usados.append(int(match.group(1)))
+        # Generar nombre único para la imagen
+        path = generar_nombre_unico(diagnostico, extension, supabase.storage.from_(BUCKET_NAME))
 
-        nuevo_numero = max(numeros_usados) + 1 if numeros_usados else 1
-        nuevo_nombre = f"{diagnostico}_{nuevo_numero}.{extension}"
-        path = f"{nuevo_nombre}"
-
-        # 📤 Subir al Storage
+        # Subir al Storage
         response = supabase.storage.from_(BUCKET_NAME).upload(
             path,
             file_bytes,
             {"content-type": imagen.type}
         )
+
         st.write("📦 Resultado del upload:", response)
 
         if hasattr(response, "error") and response.error:
