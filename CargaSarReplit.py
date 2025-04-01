@@ -74,10 +74,22 @@ if imagen and st.button("Subir Imagen"):
         elif not isinstance(imagenes_actuales, list):
             imagenes_actuales = []
 
-        num_imagen = len(imagenes_actuales) + 1
-        nuevo_nombre = f"{diagnostico}_{num_imagen}.{extension}"
+        # 🔍 Verificar qué archivos ya existen en el Storage
+        lista_storage = supabase.storage.from_(BUCKET_NAME).list()
+        archivos_existentes = [obj["name"] for obj in lista_storage if obj["name"].startswith(diagnostico)]
+
+        # 📈 Buscar el número más alto usado
+        numeros_usados = []
+        for nombre in archivos_existentes:
+            match = re.search(rf"{re.escape(diagnostico)}_(\d+)\.{extension}", nombre)
+            if match:
+                numeros_usados.append(int(match.group(1)))
+
+        nuevo_numero = max(numeros_usados) + 1 if numeros_usados else 1
+        nuevo_nombre = f"{diagnostico}_{nuevo_numero}.{extension}"
         path = f"{nuevo_nombre}"
 
+        # 📤 Subir al Storage
         response = supabase.storage.from_(BUCKET_NAME).upload(
             path,
             file_bytes,
