@@ -1,4 +1,3 @@
-
 import streamlit as st
 from supabase import create_client, Client
 import json
@@ -99,3 +98,7 @@ if imagen and st.button("Subir Imagen"):
             st.success("✅ Imagen subida y asociada al caso clínico")
             st.image(url, caption="Imagen subida", width=300)
             st.code(url, language="text")
+            st.write("📝 Resultado de actualización en la base:", update)
+
+    except Exception as e:
+        st.error(f"⚠️ Error inesperado: {str(e)}")
