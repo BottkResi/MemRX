@@ -14,7 +14,8 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 # Obtener casos clínicos
 @st.cache_data
 def obtener_casos():
-    response = supabase.table("casos_clinicos").select("id, diagnostico_principal, imagenes").limit(1000).execute()
+    response = supabase.table("casos_clinicos").select("*").limit(1000).execute()
+    st.write("🔍 Respuesta de Supabase:", response)
     return response.data if response.data else []
 
 st.title("🧠 Carga de Casos Clínicos y Subida de Imágenes")
