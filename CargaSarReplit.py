@@ -75,7 +75,7 @@ if imagen and st.button("Subir Imagen"):
             imagenes_actuales = []
 
         num_imagen = len(imagenes_actuales) + 1
-        nuevo_nombre = f"{diagnostico}_{num_imagen}.{extension}"
+        nuevo_nombre = f"{diagnostico}_{caso['id']}_{num_imagen}.{extension}"
         path = f"{nuevo_nombre}"
 
         response = supabase.storage.from_(BUCKET_NAME).upload(
