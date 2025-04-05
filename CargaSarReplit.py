@@ -19,31 +19,28 @@ def obtener_casos():
     
 st.title("🧠 Carga de Casos Clínicos y Subida de Imágenes")
 
-# --- SECCIÓN: Cargar caso desde código Python ---
-st.subheader("🐍 Cargar nuevo caso clínico en formato Python")
+# --- SECCIÓN: Cargar casos múltiples desde varios bloques 'nuevo_caso = {...}' ---
+st.subheader("🐍 Cargar casos clínicos desde múltiples bloques 'nuevo_caso'")
 
-codigo_caso = st.text_area("Pegá el bloque de código con la variable 'nuevo_caso' o 'nuevos_casos'", height=250)
+codigo_caso = st.text_area("Pegá varios bloques con la variable 'nuevo_caso = {...}'", height=400)
 
-if st.button("Cargar caso desde código"):
+if st.button("Cargar casos múltiples"):
     try:
-        contexto = {"supabase": supabase}
-        exec(codigo_caso, contexto)
-        
-        if "nuevo_caso" in contexto:
-            resultado = supabase.table("casos_clinicos").insert(contexto["nuevo_caso"]).execute()
-            st.success("✅ Caso cargado correctamente.")
-            st.json(resultado)
-        
-        elif "nuevos_casos" in contexto:
+        bloques = re.findall(r"nuevo_caso\s*=\s*{.*?}\s*", codigo_caso, re.DOTALL)
+        nuevos_casos = []
+        for bloque in bloques:
+            # Convertimos la asignación a código ejecutable
+            codigo = f"{bloque}\nnuevos_casos.append(nuevo_caso)"
+            contexto = {"nuevos_casos": []}
+            exec(codigo, contexto)
+        if contexto["nuevos_casos"]:
             resultado = supabase.table("casos_clinicos").insert(contexto["nuevos_casos"]).execute()
             st.success(f"✅ {len(contexto['nuevos_casos'])} casos cargados correctamente.")
             st.json(resultado)
-        
         else:
-            st.error("❌ No se encontró la variable 'nuevo_caso' ni 'nuevos_casos' en el código.")
-
+            st.warning("⚠️ No se encontraron bloques válidos de 'nuevo_caso'.")
     except Exception as e:
-        st.error(f"⚠️ Error al ejecutar el código: {str(e)}")
+        st.error(f"⚠️ Error al procesar los bloques: {str(e)}")
 
 # --- SECCIÓN: Subir imagen a un caso clínico existente ---
 st.subheader("📤 Subir imagen y asociar a caso clínico")
