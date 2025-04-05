@@ -16,29 +16,30 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 def obtener_casos():
     response = supabase.table("casos_clinicos").select("id, diagnostico_principal, imagenes").limit(1000).execute()
     return response.data if response.data else []
-    
+
 st.title("🧠 Carga de Casos Clínicos y Subida de Imágenes")
 
-# --- SECCIÓN: Cargar casos múltiples desde varios bloques 'nuevo_caso = {...}' ---
+# --- SECCIÓN: Cargar casos múltiples desde bloques 'nuevo_caso = {...}' ---
 st.subheader("🐍 Cargar casos clínicos desde múltiples bloques 'nuevo_caso'")
 
 codigo_caso = st.text_area("Pegá varios bloques con la variable 'nuevo_caso = {...}'", height=400)
 
 if st.button("Cargar casos múltiples"):
     try:
-        bloques = re.findall(r"nuevo_caso\s*=\s*{.*?}\s*", codigo_caso, re.DOTALL)
+        bloques = re.findall(r"(nuevo_caso\s*=\s*{(?:[^{}]|{[^{}]*})*})", codigo_caso, re.DOTALL)
         nuevos_casos = []
         for bloque in bloques:
-            # Convertimos la asignación a código ejecutable
-            codigo = f"{bloque}\nnuevos_casos.append(nuevo_caso)"
-            contexto = {"nuevos_casos": []}
-            exec(codigo, contexto)
-        if contexto["nuevos_casos"]:
-            resultado = supabase.table("casos_clinicos").insert(contexto["nuevos_casos"]).execute()
-            st.success(f"✅ {len(contexto['nuevos_casos'])} casos cargados correctamente.")
+            contexto = {}
+            exec(bloque, contexto)
+            if "nuevo_caso" in contexto:
+                nuevos_casos.append(contexto["nuevo_caso"])
+        
+        if nuevos_casos:
+            resultado = supabase.table("casos_clinicos").insert(nuevos_casos).execute()
+            st.success(f"✅ {len(nuevos_casos)} casos cargados correctamente.")
             st.json(resultado)
         else:
-            st.warning("⚠️ No se encontraron bloques válidos de 'nuevo_caso'.")
+            st.warning("⚠️ No se encontró ningún bloque 'nuevo_caso' válido.")
     except Exception as e:
         st.error(f"⚠️ Error al procesar los bloques: {str(e)}")
 
