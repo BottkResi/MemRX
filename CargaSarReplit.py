@@ -108,3 +108,83 @@ if imagen and st.button("Subir Imagen"):
 
     except Exception as e:
         st.error(f"⚠️ Error inesperado: {str(e)}")
+
+# --- SECCIÓN: Subir imágenes y asociar a casos clínicos secuenciales ---
+st.subheader("📥 Subir imágenes y asociar a casos clínicos secuenciales")
+
+id_inicio = st.number_input("Ingresá el ID del primer caso clínico:", min_value=1, step=1, key="multi_id_input")
+imagenes = st.file_uploader("Selecciona múltiples imágenes", accept_multiple_files=True, type=["png", "jpg", "jpeg"], key="multi_image_upload")
+
+# Vista preliminar
+if imagenes:
+    st.markdown("### 👀 Vista previa de asignación:")
+    preview_data = []
+    casos_dict = {c["id"]: c for c in casos}
+    for i, img in enumerate(imagenes):
+        id_actual = id_inicio + i
+        caso = casos_dict.get(id_actual)
+        if caso:
+            preview_data.append({
+                "ID": id_actual,
+                "Diagnóstico": caso["diagnostico_principal"],
+                "Nombre de imagen": img.name
+            })
+        else:
+            preview_data.append({
+                "ID": id_actual,
+                "Diagnóstico": "❌ No encontrado",
+                "Nombre de imagen": img.name
+            })
+    st.dataframe(preview_data)
+
+# Botón para confirmar subida
+if imagenes and st.button("Subir imágenes secuenciales"):
+    errores = []
+    for i, imagen in enumerate(imagenes):
+        id_actual = id_inicio + i
+        caso = casos_dict.get(id_actual)
+        if not caso:
+            errores.append(f"ID {id_actual} no encontrado.")
+            continue
+
+        try:
+            file_bytes = imagen.getvalue()
+            extension = imagen.name.split('.')[-1]
+            diagnostico = caso["diagnostico_principal"] or "caso"
+            diagnostico = re.sub(r"[^a-zA-Z0-9_]", "_", diagnostico)
+
+            imagenes_actuales = caso.get("imagenes")
+            if isinstance(imagenes_actuales, str):
+                imagenes_actuales = json.loads(imagenes_actuales)
+            elif not isinstance(imagenes_actuales, list):
+                imagenes_actuales = []
+
+            num_imagen = len(imagenes_actuales) + 1
+            nuevo_nombre = f"{diagnostico}_{id_actual}_{num_imagen}.{extension}"
+            path = f"{nuevo_nombre}"
+
+            response = supabase.storage.from_(BUCKET_NAME).upload(
+                path,
+                file_bytes,
+                {"content-type": imagen.type}
+            )
+
+            if hasattr(response, "error") and response.error:
+                errores.append(f"Error al subir imagen para ID {id_actual}: {response.error}")
+                continue
+
+            url = f"{SUPABASE_URL}/storage/v1/object/public/{BUCKET_NAME}/{path}"
+            imagenes_actuales.append(url)
+
+            update = supabase.table("casos_clinicos").update({
+                "imagenes": imagenes_actuales
+            }).eq("id", id_actual).execute()
+        except Exception as e:
+            errores.append(f"ID {id_actual}: {str(e)}")
+
+    if errores:
+        st.warning("⚠️ Algunos errores durante la subida:")
+        for e in errores:
+            st.text(f"- {e}")
+    else:
+        st.success("✅ Todas las imágenes fueron subidas correctamente.")
