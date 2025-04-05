@@ -22,18 +22,26 @@ st.title("🧠 Carga de Casos Clínicos y Subida de Imágenes")
 # --- SECCIÓN: Cargar caso desde código Python ---
 st.subheader("🐍 Cargar nuevo caso clínico en formato Python")
 
-codigo_caso = st.text_area("Pegá el bloque de código con la variable 'nuevo_caso'", height=250)
+codigo_caso = st.text_area("Pegá el bloque de código con la variable 'nuevo_caso' o 'nuevos_casos'", height=250)
 
 if st.button("Cargar caso desde código"):
     try:
         contexto = {"supabase": supabase}
         exec(codigo_caso, contexto)
+        
         if "nuevo_caso" in contexto:
             resultado = supabase.table("casos_clinicos").insert(contexto["nuevo_caso"]).execute()
             st.success("✅ Caso cargado correctamente.")
             st.json(resultado)
+        
+        elif "nuevos_casos" in contexto:
+            resultado = supabase.table("casos_clinicos").insert(contexto["nuevos_casos"]).execute()
+            st.success(f"✅ {len(contexto['nuevos_casos'])} casos cargados correctamente.")
+            st.json(resultado)
+        
         else:
-            st.error("❌ No se encontró la variable 'nuevo_caso' en el código.")
+            st.error("❌ No se encontró la variable 'nuevo_caso' ni 'nuevos_casos' en el código.")
+
     except Exception as e:
         st.error(f"⚠️ Error al ejecutar el código: {str(e)}")
 
